@@ -9,69 +9,40 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 
 #define LEDY PB4
-#define LEDG PB1
+#define LEDG PB0
+#define BUTTON PB1
 #define ADC_PORT 1
 
 //void initADC();
 uint16_t readFromADC(uint8_t adc_num);
 void blinkLed(uint8_t times);
 
+volatile uint16_t readedValue;
+
 int main(void)
 {
-	_delay_ms(5000);
-
+	// define interrupts
+	DDRB &= ~(1 << BUTTON); //set as input
+	PORTB |= (1 << BUTTON); //pull-up resistor on
+	MCUCR &= ~(1 << ISC00);
+	MCUCR |= (1 << ISC01); //falling edge of INT0 (PB1) generates interrupt
+	GIMSK |= (1 << INT0);
+	sei(); //enable global interrupt
+	
 	
 	DDRB |= (1 << LEDY) | (1 << LEDG);
-	uint16_t readedValue = 0;
-	//initADC();
-	readedValue = readFromADC(ADC_PORT);// / 10.24;
-	//uint8_t percentValue = 99 - ((readedValue >> 2) & 0xFF);
-	
-	PORTB &= ~(1 << LEDY);
-	PORTB &= ~(1 << LEDG);
-	
-	blinkLed(readedValue / 100);
-	PORTB |= (1 << LEDY);
-	_delay_ms(1000);
-	PORTB &= ~(1 << LEDY);
-	_delay_ms(1000);
-	blinkLed((readedValue % 100) / 10);
-	PORTB |= (1 << LEDY);
-	_delay_ms(1000);
-	PORTB &= ~(1 << LEDY);
-	_delay_ms(1000);
-	blinkLed((readedValue % 10));
 
     while (1) 
     {
+		
 		//readedValue = readFromADC(ADC_PORT) / 10.24;
 		//uint8_t percentValue = 99 - (readedValue & 0xFF);
-	//
-		//PORTB &= ~(1 << LEDY);
-		//PORTB &= ~(1 << LEDG);
-//
-		//if (percentValue < 30)
-		//{
-			//PORTB |= (1 << LEDY) | (1 << LEDG);
-		//}
-		//else if (percentValue < 90)
-		//{
-			//PORTB |= (1 << LEDY);
-		//}
-		//else
-		//{
-			//PORTB |= (1 << LEDG);
-		//}
     }
 }
 
-// void initADC()
-// {
-// 	ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);	// 128 prescale for 8MHz
-// 	ADCSRA |= (1 << ADEN);	// enable ADC
-// }
 
 void blinkLed(uint8_t times)
 {
@@ -101,4 +72,26 @@ uint16_t readFromADC(uint8_t adc_num)
 	readed_value += (ADCH << 8);
 
 	return readed_value;
+}
+
+ISR (INT0_vect)
+{
+	//initADC();
+	readedValue = readFromADC(ADC_PORT);// / 10.24;
+	//uint8_t percentValue = 99 - ((readedValue >> 2) & 0xFF);
+	
+	PORTB &= ~(1 << LEDY);
+	PORTB &= ~(1 << LEDG);
+	
+	blinkLed(readedValue / 100);
+	PORTB |= (1 << LEDY);
+	_delay_ms(1000);
+	PORTB &= ~(1 << LEDY);
+	_delay_ms(1000);
+	blinkLed((readedValue % 100) / 10);
+	PORTB |= (1 << LEDY);
+	_delay_ms(1000);
+	PORTB &= ~(1 << LEDY);
+	_delay_ms(1000);
+	blinkLed((readedValue % 10));
 }
